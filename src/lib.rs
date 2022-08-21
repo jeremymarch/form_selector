@@ -1,24 +1,25 @@
 extern crate hoplite_verbs_rs;
 use hoplite_verbs_rs::*;
 use rand::seq::SliceRandom;
-use rand::Rng;
+//use rand::Rng;
 use std::io::BufReader;
 use std::io::BufRead;
 use std::fs::File;
-//use std::sync::Arc;
-use std::rc::Rc;
+use std::sync::Arc; //https://stackoverflow.com/questions/41770184/arc-reference-to-member-of-field
+//use std::rc::Rc;
 
-#[derive(Eq, PartialEq, Debug, Clone)]
-pub struct SmallGreekVerbForm {
-    pub verb: usize,
-    pub person: HcPerson,
-    pub number: HcNumber,
-    pub tense: HcTense,
-    pub voice: HcVoice,
-    pub mood: HcMood,
-    pub gender: Option<HcGender>,
-    pub case: Option<HcCase>,
-}
+//if we want a version where verb is an index in an array?
+// #[derive(Eq, PartialEq, Debug, Clone)]
+// pub struct SmallGreekVerbForm {
+//     pub verb: usize,
+//     pub person: HcPerson,
+//     pub number: HcNumber,
+//     pub tense: HcTense,
+//     pub voice: HcVoice,
+//     pub mood: HcMood,
+//     pub gender: Option<HcGender>,
+//     pub case: Option<HcCase>,
+// }
 
 pub trait FormChooser {
     fn next_form(&mut self) -> Result<String, &str>;
@@ -31,9 +32,9 @@ pub trait FormChooser {
 // }
 
 pub struct RandomFormChooser {
-    pub verbs: Vec<Rc<HcGreekVerb>>,
+    pub verbs: Vec<Arc<HcGreekVerb>>,
     pub unit: u32,
-    pub history: Vec<SmallGreekVerbForm>
+    pub history: Vec<HcGreekVerbForm>
 }
 
 pub fn init_random_form_chooser(path:&str, unit: u32) -> RandomFormChooser {
@@ -43,7 +44,7 @@ pub fn init_random_form_chooser(path:&str, unit: u32) -> RandomFormChooser {
         for (idx, pp_line) in pp_reader.lines().enumerate() {
             if let Ok(line) = pp_line {
                 //verbs.push(Arc::new(Box::new(HcGreekVerb::from_string_with_properties(idx as u32, &line).unwrap())));
-                verbs.push(Rc::new(HcGreekVerb::from_string_with_properties(idx as u32, &line).unwrap()));
+                verbs.push(Arc::new(HcGreekVerb::from_string_with_properties(idx as u32, &line).unwrap()));
             }
         }
     }
@@ -70,21 +71,22 @@ impl FormChooser for RandomFormChooser {
 
             if self.history.len() < 1 {
                 //let l = self.verbs.len();
-                //let v = self.verbs.choose(&mut rand::thread_rng()).unwrap();
-                let v = rand::thread_rng().gen_range(0..self.verbs.len());
+                let v = self.verbs.choose(&mut rand::thread_rng()).unwrap();
+                //let v = rand::thread_rng().gen_range(0..self.verbs.len());
                 let person = persons.choose(&mut rand::thread_rng()).unwrap().clone();
                 let number = numbers.choose(&mut rand::thread_rng()).unwrap().clone();
                 let tense = tenses.choose(&mut rand::thread_rng()).unwrap().clone();
                 let voice = voices.choose(&mut rand::thread_rng()).unwrap().clone();
                 let mood = moods.choose(&mut rand::thread_rng()).unwrap().clone();
 
-                self.history.push( SmallGreekVerbForm {verb:v, person, number, tense, voice, mood, gender:None, case:None});
+                //self.history.push( SmallGreekVerbForm {verb:v, person, number, tense, voice, mood, gender:None, case:None});
+                self.history.push( HcGreekVerbForm {verb:v.clone(), person, number, tense, voice, mood, gender:None, case:None});
             }
 
             //println!("Form: {} {:?} {:?} {:?} {:?} {:?}", v.pps[0], p, n, t, m, vo);
 
             if let Some(b) = self.history.last() {
-                let a = HcGreekVerbForm { verb:&self.verbs[b.verb], person:b.person, number:b.number, tense:b.tense, voice:b.voice,mood:b.mood,gender:None, case:None};
+                let a = HcGreekVerbForm { verb:b.verb.clone(), person:b.person, number:b.number, tense:b.tense, voice:b.voice,mood:b.mood,gender:None, case:None};
                 if let Ok(f) = a.get_form(false) {
                     //self.form = Some(b.clone());
                     return Ok(f.last().unwrap().form.to_string());

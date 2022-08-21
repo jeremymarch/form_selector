@@ -63,6 +63,8 @@ impl FormChooser for RandomFormChooser {
         //let luw = "λῡ́ω, λῡ́σω, ἔλῡσα, λέλυκα, λέλυμαι, ἐλύθην";
         //let a = HcGreekVerb::from_string(1, luw, REGULAR).unwrap();
         let mut count = 0;
+        let mut a:HcGreekVerbForm;
+        let mut found = false;
         loop {
             count += 1;
             if count > 1000 {
@@ -79,24 +81,22 @@ impl FormChooser for RandomFormChooser {
                 let voice = voices.choose(&mut rand::thread_rng()).unwrap().clone();
                 let mood = moods.choose(&mut rand::thread_rng()).unwrap().clone();
 
-                //self.history.push( SmallGreekVerbForm {verb:v, person, number, tense, voice, mood, gender:None, case:None});
-                self.history.push( HcGreekVerbForm {verb:v.clone(), person, number, tense, voice, mood, gender:None, case:None});
-            }
-
-            //println!("Form: {} {:?} {:?} {:?} {:?} {:?}", v.pps[0], p, n, t, m, vo);
-
-            if let Some(b) = self.history.last() {
-                let a = HcGreekVerbForm { verb:b.verb.clone(), person:b.person, number:b.number, tense:b.tense, voice:b.voice,mood:b.mood,gender:None, case:None};
-                if let Ok(f) = a.get_form(false) {
-                    //self.form = Some(b.clone());
-                    return Ok(f.last().unwrap().form.to_string());
+                a = HcGreekVerbForm { verb:v.clone(), person, number, tense, voice, mood, gender: None, case: None};
+                if let Ok(_f) = a.get_form(false) {
+                    self.history.push( a );
+                    found = true;
+                    break;
                 }
             }
-            // }
-            // else {
-            //     continue;
-            // }
+            //println!("Form: {} {:?} {:?} {:?} {:?} {:?}", v.pps[0], p, n, t, m, vo);
         }
+        if found {
+            if let Ok(f) = self.history.last().unwrap().get_form(false) {
+                return Ok(f.last().unwrap().form.to_string());
+            }
+        }
+
+        return Err("overflow");
     }
 }
 
@@ -108,6 +108,6 @@ mod tests {
         let mut chooser = init_random_form_chooser("../hoplite_verbs_rs/testdata/pp.txt", 20);
 
         assert_eq!(chooser.next_form(), Ok(String::from("ἔλῡσα")));
-        assert_ne!(chooser.next_form(), Ok(String::from("ἔλῡσfα")));
+        assert_ne!(chooser.next_form(), Ok(String::from("ἔλῡσα")));
     }
 }

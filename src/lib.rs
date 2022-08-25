@@ -34,7 +34,15 @@ pub trait FormChooser {
 pub struct RandomFormChooser {
     pub verbs: Vec<Arc<HcGreekVerb>>,
     pub unit: u32,
-    pub history: Vec<HcGreekVerbForm>
+    pub history: Vec<HcGreekVerbForm>,
+    pub params_to_change: u8,
+    pub reps_per_verb: u8,
+    pub persons: Vec<HcPerson>,
+    pub numbers: Vec<HcNumber>,
+    pub tenses: Vec<HcTense>,
+    pub moods: Vec<HcMood>,
+    pub voices: Vec<HcVoice>,
+    verb_counter: u8,
 }
 
 pub fn init_random_form_chooser(path:&str, unit: u32) -> RandomFormChooser {
@@ -43,25 +51,22 @@ pub fn init_random_form_chooser(path:&str, unit: u32) -> RandomFormChooser {
         let pp_reader = BufReader::new(pp_file);
         for (idx, pp_line) in pp_reader.lines().enumerate() {
             if let Ok(line) = pp_line {
-                //verbs.push(Arc::new(Box::new(HcGreekVerb::from_string_with_properties(idx as u32, &line).unwrap())));
                 verbs.push(Arc::new(HcGreekVerb::from_string_with_properties(idx as u32, &line).unwrap()));
             }
         }
     }
-    RandomFormChooser {verbs, unit, history: vec![] }
+
+    let persons = vec![HcPerson::First, HcPerson::Second, HcPerson::Third];
+    let numbers = vec![HcNumber::Singular, HcNumber::Plural];
+    let tenses = vec![HcTense::Present, HcTense::Imperfect, HcTense::Future, HcTense::Aorist, HcTense::Perfect, HcTense::Pluperfect];
+    let moods = vec![HcMood::Indicative, HcMood::Subjunctive,HcMood::Optative,HcMood::Imperative];
+    let voices = vec![HcVoice::Active,HcVoice::Middle,HcVoice::Passive];
+
+    RandomFormChooser {verbs, unit, history: vec![], params_to_change: 2, reps_per_verb: 4,  persons, numbers, tenses, moods, voices, verb_counter: 0 }
 }
 
 impl FormChooser for RandomFormChooser {
     fn next_form(&mut self) -> Result<String, &str> {
-        let persons = [HcPerson::First, HcPerson::Second, HcPerson::Third];
-        let numbers = [HcNumber::Singular, HcNumber::Plural];
-        let tenses = [HcTense::Present, HcTense::Imperfect, HcTense::Future, HcTense::Aorist, HcTense::Perfect, HcTense::Pluperfect];
-        let moods = [HcMood::Indicative, HcMood::Subjunctive,HcMood::Optative,HcMood::Imperative];
-        let voices = [HcVoice::Active,HcVoice::Middle,HcVoice::Passive];
-    
-    
-        //let luw = "λῡ́ω, λῡ́σω, ἔλῡσα, λέλυκα, λέλυμαι, ἐλύθην";
-        //let a = HcGreekVerb::from_string(1, luw, REGULAR).unwrap();
         let mut count = 0;
         let mut a:HcGreekVerbForm;
         let mut found = false;
@@ -71,15 +76,15 @@ impl FormChooser for RandomFormChooser {
                 return Err("overflow");
             }
 
-            if self.history.len() < 1 {
+            //if self.history.len() < 1 {
                 //let l = self.verbs.len();
                 let v = self.verbs.choose(&mut rand::thread_rng()).unwrap();
                 //let v = rand::thread_rng().gen_range(0..self.verbs.len());
-                let person = persons.choose(&mut rand::thread_rng()).unwrap().clone();
-                let number = numbers.choose(&mut rand::thread_rng()).unwrap().clone();
-                let tense = tenses.choose(&mut rand::thread_rng()).unwrap().clone();
-                let voice = voices.choose(&mut rand::thread_rng()).unwrap().clone();
-                let mood = moods.choose(&mut rand::thread_rng()).unwrap().clone();
+                let person = self.persons.choose(&mut rand::thread_rng()).unwrap().clone();
+                let number = self.numbers.choose(&mut rand::thread_rng()).unwrap().clone();
+                let tense = self.tenses.choose(&mut rand::thread_rng()).unwrap().clone();
+                let voice = self.voices.choose(&mut rand::thread_rng()).unwrap().clone();
+                let mood = self.moods.choose(&mut rand::thread_rng()).unwrap().clone();
 
                 a = HcGreekVerbForm { verb:v.clone(), person, number, tense, voice, mood, gender: None, case: None};
                 if let Ok(_f) = a.get_form(false) {
@@ -87,7 +92,7 @@ impl FormChooser for RandomFormChooser {
                     found = true;
                     break;
                 }
-            }
+            //}
             //println!("Form: {} {:?} {:?} {:?} {:?} {:?}", v.pps[0], p, n, t, m, vo);
         }
         if found {
@@ -106,7 +111,8 @@ mod tests {
     #[test]
     fn it_works() {        
         let mut chooser = init_random_form_chooser("../hoplite_verbs_rs/testdata/pp.txt", 20);
-
+        // chooser.persons = vec![HcPerson::First];
+        // chooser.numbers = vec![HcNumber::Singular];
         assert_eq!(chooser.next_form(), Ok(String::from("ἔλῡσα")));
         assert_ne!(chooser.next_form(), Ok(String::from("ἔλῡσα")));
     }

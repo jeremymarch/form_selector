@@ -23,7 +23,7 @@ use std::sync::Arc; //https://stackoverflow.com/questions/41770184/arc-reference
 // }
 
 pub trait FormChooser {
-    fn next_form(&mut self) -> Result<String, &str>;
+    fn next_form(&mut self) -> Result<HcGreekVerbForm, &str>;
 }
 
 // pub struct RandomFormChooser<'a> {
@@ -58,8 +58,8 @@ pub fn init_random_form_chooser(path:&str, unit: u32) -> RandomFormChooser {
         }
     }
     verbs.shuffle(&mut thread_rng());
-    for a in &verbs {
-        println!("v: {}", a.pps[0]);
+    for (idx,a) in verbs.iter().enumerate() {
+        println!("v{}: {}", idx, a.pps[0]);
     }
 
     let persons = vec![HcPerson::First, HcPerson::Second, HcPerson::Third];
@@ -72,24 +72,26 @@ pub fn init_random_form_chooser(path:&str, unit: u32) -> RandomFormChooser {
 }
 
 impl FormChooser for RandomFormChooser {
-    fn next_form(&mut self) -> Result<String, &str> {
+    fn next_form(&mut self) -> Result<HcGreekVerbForm, &str> {
         let mut count = 0;
         let mut a:HcGreekVerbForm;
         let mut found = false;
-                
-        //shuffle verbs, then cycle through to end and re-shuffle
-        if self.verb_idx >= self.verbs.len() {
-            //println!("shuffle");
-            self.verbs.shuffle(&mut thread_rng());
-            self.verb_idx = 0;
+
+        if self.verbs.len() < 1 {
+            return Err("no verbs");
         }
-        //let vv = &self.verbs[self.verb_idx];
-        //println!("\tverb: {}", vv.pps[0]);
         
-        if self.verb_counter >= self.reps_per_verb {
+        if self.verb_counter >= self.reps_per_verb  {
             //println!("counter over");
             self.verb_idx += 1;
             self.verb_counter = 0;
+            
+            //shuffle verbs, then cycle through to end and re-shuffle
+            if self.verb_idx >= self.verbs.len() {
+                println!("shuffle");
+                self.verbs.shuffle(&mut thread_rng());
+                self.verb_idx = 0;
+            }
         }
 
         self.verb_counter += 1;
@@ -99,21 +101,16 @@ impl FormChooser for RandomFormChooser {
             if count > 10000 {
                 return Err("overflow");
             }
-                
-            let person;
-            let number;
-            let tense;
-            let voice;
-            let mood;
+
             //println!("{} {} - ", self.verb_counter, self.verb_idx);
             if self.history.len() < 1 || self.verb_counter == 1 {
                 //println!("change verb idx: {}", self.verb_idx);
                 //println!("\tverb2: {}", self.verbs[self.verb_idx].pps[0]);
-                person = self.persons.choose(&mut rand::thread_rng()).unwrap().clone();
-                number = self.numbers.choose(&mut rand::thread_rng()).unwrap().clone();
-                tense = self.tenses.choose(&mut rand::thread_rng()).unwrap().clone();
-                voice = self.voices.choose(&mut rand::thread_rng()).unwrap().clone();
-                mood = self.moods.choose(&mut rand::thread_rng()).unwrap().clone();
+                let person = self.persons.choose(&mut rand::thread_rng()).unwrap().clone();
+                let number = self.numbers.choose(&mut rand::thread_rng()).unwrap().clone();
+                let tense = self.tenses.choose(&mut rand::thread_rng()).unwrap().clone();
+                let voice = self.voices.choose(&mut rand::thread_rng()).unwrap().clone();
+                let mood = self.moods.choose(&mut rand::thread_rng()).unwrap().clone();
 
                 a = HcGreekVerbForm { verb: self.verbs[self.verb_idx].clone(), person, number, tense, voice, mood, gender: None, case: None};
             }
@@ -134,10 +131,10 @@ impl FormChooser for RandomFormChooser {
         }
 
         if found {
-            if let Ok(f) = self.history.last().unwrap().get_form(false) {
+            //if let Some(f) = self.history.last().unwrap() {
                 //println!("\tForm: {} {:?} {:?} {:?} {:?} {:?}", self.history.last().unwrap().verb.pps[0], self.history.last().unwrap().person, self.history.last().unwrap().number, self.history.last().unwrap().tense, self.history.last().unwrap().mood, self.history.last().unwrap().voice);
-                return Ok(f.last().unwrap().form.to_string());
-            }
+                return Ok(self.history.last().unwrap().clone());
+            //}
         }
 
         return Err("overflow");
@@ -153,24 +150,13 @@ mod tests {
         // chooser.persons = vec![HcPerson::First];
         // chooser.numbers = vec![HcNumber::Singular];
 
-        println!("\tform: {}", chooser.next_form().unwrap());
-        println!("\tform: {}", chooser.next_form().unwrap());
-        println!("\tform: {}", chooser.next_form().unwrap());
-        println!("\tform: {}", chooser.next_form().unwrap());
-        println!("\tform: {}", chooser.next_form().unwrap());
-        println!("\tform: {}", chooser.next_form().unwrap());
-        println!("\tform: {}", chooser.next_form().unwrap());
-        println!("\tform: {}", chooser.next_form().unwrap());
-        println!("\tform: {}", chooser.next_form().unwrap());
-        println!("\tform: {}", chooser.next_form().unwrap());
-        println!("\tform: {}", chooser.next_form().unwrap());
-        println!("\tform: {}", chooser.next_form().unwrap());
-        println!("\tform: {}", chooser.next_form().unwrap());
-        println!("\tform: {}", chooser.next_form().unwrap());
-        println!("\tform: {}", chooser.next_form().unwrap());
-        println!("\tform: {}", chooser.next_form().unwrap());
+        for _ in 0..=10016 {
+            let mut vf = chooser.next_form().unwrap();
+            let mut vfs = vf.get_form(false).unwrap().last().unwrap().form.to_string();
+            println!("{:?} {:?} {:?} {:?} {:?} \t\t\t- {}", vf.person, vf.number, vf.tense, vf.mood, vf.voice, vfs);
+        }
 
-        assert_eq!(chooser.next_form(), Ok(String::from("ἔλῡσα")));
-        assert_ne!(chooser.next_form(), Ok(String::from("ἔλῡσα")));
+        assert_eq!(chooser.next_form().unwrap().get_form(false).unwrap().last().unwrap().form.to_string(), String::from("ἔλῡσα"));
+        assert_ne!(chooser.next_form().unwrap().get_form(false).unwrap().last().unwrap().form.to_string(), String::from("ἔλῡσα"));
     }
 }

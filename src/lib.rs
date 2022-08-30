@@ -2,6 +2,7 @@ extern crate hoplite_verbs_rs;
 use hoplite_verbs_rs::*;
 use rand::seq::SliceRandom;
 //use rand::Rng;
+use rand::thread_rng;
 use std::io::BufReader;
 use std::io::BufRead;
 use std::fs::File;
@@ -43,6 +44,7 @@ pub struct RandomFormChooser {
     pub moods: Vec<HcMood>,
     pub voices: Vec<HcVoice>,
     verb_counter: u8,
+    verb_idx:usize,
 }
 
 pub fn init_random_form_chooser(path:&str, unit: u32) -> RandomFormChooser {
@@ -55,6 +57,10 @@ pub fn init_random_form_chooser(path:&str, unit: u32) -> RandomFormChooser {
             }
         }
     }
+    verbs.shuffle(&mut thread_rng());
+    for a in &verbs {
+        println!("v: {}", a.pps[0]);
+    }
 
     let persons = vec![HcPerson::First, HcPerson::Second, HcPerson::Third];
     let numbers = vec![HcNumber::Singular, HcNumber::Plural];
@@ -62,7 +68,7 @@ pub fn init_random_form_chooser(path:&str, unit: u32) -> RandomFormChooser {
     let moods = vec![HcMood::Indicative, HcMood::Subjunctive,HcMood::Optative,HcMood::Imperative];
     let voices = vec![HcVoice::Active,HcVoice::Middle,HcVoice::Passive];
 
-    RandomFormChooser {verbs, unit, history: vec![], params_to_change: 2, reps_per_verb: 4,  persons, numbers, tenses, moods, voices, verb_counter: 0 }
+    RandomFormChooser {verbs, unit, history: vec![], params_to_change: 2, reps_per_verb: 4,  persons, numbers, tenses, moods, voices, verb_counter: 0, verb_idx: 0 }
 }
 
 impl FormChooser for RandomFormChooser {
@@ -70,33 +76,66 @@ impl FormChooser for RandomFormChooser {
         let mut count = 0;
         let mut a:HcGreekVerbForm;
         let mut found = false;
+                
+        //shuffle verbs, then cycle through to end and re-shuffle
+        if self.verb_idx >= self.verbs.len() {
+            //println!("shuffle");
+            self.verbs.shuffle(&mut thread_rng());
+            self.verb_idx = 0;
+        }
+        //let vv = &self.verbs[self.verb_idx];
+        //println!("\tverb: {}", vv.pps[0]);
+        
+        if self.verb_counter >= self.reps_per_verb {
+            //println!("counter over");
+            self.verb_idx += 1;
+            self.verb_counter = 0;
+        }
+
+        self.verb_counter += 1;
+
         loop {
             count += 1;
-            if count > 1000 {
+            if count > 10000 {
                 return Err("overflow");
             }
+                
+            let person;
+            let number;
+            let tense;
+            let voice;
+            let mood;
+            //println!("{} {} - ", self.verb_counter, self.verb_idx);
+            if self.history.len() < 1 || self.verb_counter == 1 {
+                //println!("change verb idx: {}", self.verb_idx);
+                //println!("\tverb2: {}", self.verbs[self.verb_idx].pps[0]);
+                person = self.persons.choose(&mut rand::thread_rng()).unwrap().clone();
+                number = self.numbers.choose(&mut rand::thread_rng()).unwrap().clone();
+                tense = self.tenses.choose(&mut rand::thread_rng()).unwrap().clone();
+                voice = self.voices.choose(&mut rand::thread_rng()).unwrap().clone();
+                mood = self.moods.choose(&mut rand::thread_rng()).unwrap().clone();
 
-            //if self.history.len() < 1 {
-                //let l = self.verbs.len();
-                let v = self.verbs.choose(&mut rand::thread_rng()).unwrap();
-                //let v = rand::thread_rng().gen_range(0..self.verbs.len());
-                let person = self.persons.choose(&mut rand::thread_rng()).unwrap().clone();
-                let number = self.numbers.choose(&mut rand::thread_rng()).unwrap().clone();
-                let tense = self.tenses.choose(&mut rand::thread_rng()).unwrap().clone();
-                let voice = self.voices.choose(&mut rand::thread_rng()).unwrap().clone();
-                let mood = self.moods.choose(&mut rand::thread_rng()).unwrap().clone();
+                a = HcGreekVerbForm { verb: self.verbs[self.verb_idx].clone(), person, number, tense, voice, mood, gender: None, case: None};
+            }
+            else {
+                a = self.history.last().unwrap().clone();
+                a.change_params(2, &self.persons, &self.numbers, &self.tenses, &self.voices, &self.moods);
+            }
 
-                a = HcGreekVerbForm { verb:v.clone(), person, number, tense, voice, mood, gender: None, case: None};
-                if let Ok(_f) = a.get_form(false) {
-                    self.history.push( a );
-                    found = true;
-                    break;
-                }
-            //}
-            //println!("Form: {} {:?} {:?} {:?} {:?} {:?}", v.pps[0], p, n, t, m, vo);
+            if let Ok(_f) = a.get_form(false) {
+                self.history.push( a );
+                found = true;
+                break;
+            }
+            else {
+                //println!("\t\tNope Form: {} {:?} {:?} {:?} {:?} {:?}", a.verb.pps[0], a.person, a.number, a.tense, a.mood, a.voice);
+            }
+            
         }
+
         if found {
             if let Ok(f) = self.history.last().unwrap().get_form(false) {
+                //println!("\tForm: {} {:?} {:?} {:?} {:?} {:?}", self.history.last().unwrap().verb.pps[0], self.history.last().unwrap().person, self.history.last().unwrap().number, self.history.last().unwrap().tense, self.history.last().unwrap().mood, self.history.last().unwrap().voice);
                 return Ok(f.last().unwrap().form.to_string());
             }
         }
@@ -113,6 +152,24 @@ mod tests {
         let mut chooser = init_random_form_chooser("../hoplite_verbs_rs/testdata/pp.txt", 20);
         // chooser.persons = vec![HcPerson::First];
         // chooser.numbers = vec![HcNumber::Singular];
+
+        println!("\tform: {}", chooser.next_form().unwrap());
+        println!("\tform: {}", chooser.next_form().unwrap());
+        println!("\tform: {}", chooser.next_form().unwrap());
+        println!("\tform: {}", chooser.next_form().unwrap());
+        println!("\tform: {}", chooser.next_form().unwrap());
+        println!("\tform: {}", chooser.next_form().unwrap());
+        println!("\tform: {}", chooser.next_form().unwrap());
+        println!("\tform: {}", chooser.next_form().unwrap());
+        println!("\tform: {}", chooser.next_form().unwrap());
+        println!("\tform: {}", chooser.next_form().unwrap());
+        println!("\tform: {}", chooser.next_form().unwrap());
+        println!("\tform: {}", chooser.next_form().unwrap());
+        println!("\tform: {}", chooser.next_form().unwrap());
+        println!("\tform: {}", chooser.next_form().unwrap());
+        println!("\tform: {}", chooser.next_form().unwrap());
+        println!("\tform: {}", chooser.next_form().unwrap());
+
         assert_eq!(chooser.next_form(), Ok(String::from("ἔλῡσα")));
         assert_ne!(chooser.next_form(), Ok(String::from("ἔλῡσα")));
     }

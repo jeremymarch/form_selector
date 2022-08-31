@@ -8,6 +8,8 @@ edition = "2021"
 [dependencies]
 hoplite_verbs_rs = { path = "../hoplite_verbs_rs" }
 #hoplite_verbs_rs = { git = "https://github.com/jeremymarch/hoplite_verbs_rs", version = "0.2.0" }
+rustunicodetests = { path = "../rustunicodetests" }
+#rustunicodetests = { git = "https://github.com/jeremymarch/rustunicodetests", version = "0.1.0" }
 rand = "0.8.5"
 
 [profile.release]

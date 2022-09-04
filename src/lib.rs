@@ -39,13 +39,13 @@ pub struct RandomFormChooser {
     pub unit: u32,
     pub history: Vec<HcGreekVerbForm>,
     pub params_to_change: u8,
-    reps_per_verb: u8,
+    pub reps_per_verb: u8,
     pub persons: Vec<HcPerson>,
     pub numbers: Vec<HcNumber>,
     pub tenses: Vec<HcTense>,
     pub moods: Vec<HcMood>,
     pub voices: Vec<HcVoice>,
-    verb_counter: u8,
+    pub verb_counter: u8,
     verb_idx: usize,
 }
 
@@ -113,12 +113,13 @@ impl FormChooser for RandomFormChooser {
             //check verb
             let prev_form = self.history.last().unwrap();
             let prev_s = prev_form.get_form(false).unwrap().last().unwrap().form.to_string();
+
             if hgk_compare(&prev_s, prev_answer.unwrap(), 0) == 0 {
-                println!("same");
+                //println!("correct");
                 is_correct = Some(true);
             }
             else {
-                println!("not same");
+                //println!("incorrect");
                 is_correct = Some(false);
             }
         }
@@ -140,11 +141,20 @@ impl FormChooser for RandomFormChooser {
                 let mood = self.moods.choose(&mut rand::thread_rng()).unwrap().clone();
 
                 a = HcGreekVerbForm { verb: self.verbs[self.verb_idx].clone(), person, number, tense, voice, mood, gender: None, case: None};
+            
+                if let Ok(_f) = a.get_form(false) {
+                    self.history.push( a );
+                    found = true;
+                    //break;
+                }
+                else {
+                    //println!("\t\tNope Form: {} {:?} {:?} {:?} {:?} {:?}", a.verb.pps[0], a.person, a.number, a.tense, a.mood, a.voice);
+                    continue;
+                }
             }
-            else {
-                a = self.history.last().unwrap().clone();
-                a.change_params(2, &self.persons, &self.numbers, &self.tenses, &self.voices, &self.moods);
-            }
+
+            a = self.history.last().unwrap().clone();
+            a.change_params(2, &self.persons, &self.numbers, &self.tenses, &self.voices, &self.moods);
 
             if let Ok(_f) = a.get_form(false) {
                 self.history.push( a );
@@ -153,6 +163,7 @@ impl FormChooser for RandomFormChooser {
             }
             else {
                 //println!("\t\tNope Form: {} {:?} {:?} {:?} {:?} {:?}", a.verb.pps[0], a.person, a.number, a.tense, a.mood, a.voice);
+                continue;
             }
         }
 

@@ -8,31 +8,11 @@ use std::io::BufReader;
 use std::io::BufRead;
 use std::fs::File;
 use std::sync::Arc; //https://stackoverflow.com/questions/41770184/arc-reference-to-member-of-field
-//use std::rc::Rc;
-
-//if we want a version where verb is an index in an array?
-// #[derive(Eq, PartialEq, Debug, Clone)]
-// pub struct SmallGreekVerbForm {
-//     pub verb: usize,
-//     pub person: HcPerson,
-//     pub number: HcNumber,
-//     pub tense: HcTense,
-//     pub voice: HcVoice,
-//     pub mood: HcMood,
-//     pub gender: Option<HcGender>,
-//     pub case: Option<HcCase>,
-// }
 
 pub trait FormChooser {
     fn next_form(&mut self, prev_answer:Option<&str>) -> Result<(HcGreekVerbForm, Option<bool>), &str>;
     fn set_reps_per_verb(&mut self, reps:u8);
 }
-
-// pub struct RandomFormChooser<'a> {
-//     pub verbs: Vec<Arc<Box<HcGreekVerb>>>,
-//     pub unit: u32,
-//     pub history:Vec<Arc<Box<HcGreekVerbForm<'a>>>>
-// }
 
 pub struct RandomFormChooser {
     pub verbs: Vec<Arc<HcGreekVerb>>,
@@ -47,6 +27,7 @@ pub struct RandomFormChooser {
     pub voices: Vec<HcVoice>,
     pub verb_counter: u8,
     verb_idx: usize,
+    pub change_verb_incorrect: bool,
 }
 
 pub fn init_random_form_chooser(path:&str, unit: u32) -> RandomFormChooser {
@@ -71,7 +52,7 @@ pub fn init_random_form_chooser(path:&str, unit: u32) -> RandomFormChooser {
     let moods = vec![HcMood::Indicative, HcMood::Subjunctive, HcMood::Optative, HcMood::Imperative];
     let voices = vec![HcVoice::Active, HcVoice::Middle, HcVoice::Passive];
 
-    RandomFormChooser {verbs, unit, history: vec![], params_to_change: 2, reps_per_verb: 4,  persons, numbers, tenses, moods, voices, verb_counter: 0, verb_idx: 0 }
+    RandomFormChooser {verbs, unit, history: vec![], params_to_change: 2, reps_per_verb: 4,  persons, numbers, tenses, moods, voices, verb_counter: 0, verb_idx: 0, change_verb_incorrect: true }
 }
 
 impl FormChooser for RandomFormChooser {
@@ -93,6 +74,18 @@ impl FormChooser for RandomFormChooser {
         if self.verbs.len() < 1 {
             return Err("no verbs");
         }
+
+        if self.history.len() > 0 && prev_answer.is_some() {
+            //check verb
+            let prev_form = self.history.last().unwrap();
+            let prev_s = prev_form.get_form(false).unwrap().last().unwrap().form.to_string();
+
+            is_correct = Some(hgk_compare_multiple_forms(&prev_s.replace("/", ","), prev_answer.unwrap()));
+
+            if !is_correct.unwrap() && self.change_verb_incorrect {
+                self.verb_counter = self.reps_per_verb;
+            }
+        }
         
         if self.verb_counter >= self.reps_per_verb  {
             //println!("counter over");
@@ -108,14 +101,6 @@ impl FormChooser for RandomFormChooser {
         }
 
         self.verb_counter += 1;
-
-        if self.history.len() > 0 && prev_answer.is_some() {
-            //check verb
-            let prev_form = self.history.last().unwrap();
-            let prev_s = prev_form.get_form(false).unwrap().last().unwrap().form.to_string();
-
-            is_correct = Some(hgk_compare_multiple_forms(&prev_s.replace("/", ","), prev_answer.unwrap()));
-        }
 
         loop {
             count += 1;

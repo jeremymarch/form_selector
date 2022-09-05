@@ -1,6 +1,6 @@
 extern crate hoplite_verbs_rs;
 use hoplite_verbs_rs::*;
-use rustunicodetests::hgk_compare;
+use rustunicodetests::hgk_compare_multiple_forms;
 use rand::seq::SliceRandom;
 //use rand::Rng;
 use rand::thread_rng;
@@ -114,14 +114,7 @@ impl FormChooser for RandomFormChooser {
             let prev_form = self.history.last().unwrap();
             let prev_s = prev_form.get_form(false).unwrap().last().unwrap().form.to_string();
 
-            if hgk_compare(&prev_s, prev_answer.unwrap(), 0) == 0 {
-                //println!("correct");
-                is_correct = Some(true);
-            }
-            else {
-                //println!("incorrect");
-                is_correct = Some(false);
-            }
+            is_correct = Some(hgk_compare_multiple_forms(&prev_s.replace("/", ","), prev_answer.unwrap()));
         }
 
         loop {
@@ -144,7 +137,7 @@ impl FormChooser for RandomFormChooser {
             
                 if let Ok(_f) = a.get_form(false) {
                     self.history.push( a );
-                    found = true;
+                    //found = true;
                     //break;
                 }
                 else {
@@ -167,11 +160,8 @@ impl FormChooser for RandomFormChooser {
             }
         }
 
-        if found {
-            //if let Some(f) = self.history.last().unwrap() {
-                //println!("\tForm: {} {:?} {:?} {:?} {:?} {:?}", self.history.last().unwrap().verb.pps[0], self.history.last().unwrap().person, self.history.last().unwrap().number, self.history.last().unwrap().tense, self.history.last().unwrap().mood, self.history.last().unwrap().voice);
-                return Ok((self.history.last().unwrap().clone(), is_correct));
-            //}
+        if found { //we don't need this variable
+            return Ok((self.history.last().unwrap().clone(), is_correct));
         }
 
         return Err("overflow");

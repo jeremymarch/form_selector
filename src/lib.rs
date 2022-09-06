@@ -36,7 +36,9 @@ pub fn init_random_form_chooser(path:&str, unit: u32) -> RandomFormChooser {
         let pp_reader = BufReader::new(pp_file);
         for (idx, pp_line) in pp_reader.lines().enumerate() {
             if let Ok(line) = pp_line {
-                verbs.push(Arc::new(HcGreekVerb::from_string_with_properties(idx as u32, &line).unwrap()));
+                if line.chars().nth(0) != Some('#') { //skip commented lines
+                    verbs.push(Arc::new(HcGreekVerb::from_string_with_properties(idx as u32, &line).unwrap()));
+                }
             }
         }
     }

@@ -73,16 +73,16 @@ impl FormChooser for RandomFormChooser {
         let mut found = false;
         let mut is_correct:Option<bool> = None;
 
-        if self.verbs.len() < 1 {
+        if self.verbs.is_empty() {
             return Err("no verbs");
         }
 
-        if self.history.len() > 0 && prev_answer.is_some() {
+        if !self.history.is_empty() && prev_answer.is_some() {
             //check verb
             let prev_form = self.history.last().unwrap();
             let prev_s = prev_form.get_form(false).unwrap().last().unwrap().form.to_string();
 
-            is_correct = Some(hgk_compare_multiple_forms(&prev_s.replace("/", ","), prev_answer.unwrap()));
+            is_correct = Some(hgk_compare_multiple_forms(&prev_s.replace('/', ","), prev_answer.unwrap()));
 
             if !is_correct.unwrap() && self.change_verb_incorrect {
                 self.verb_counter = self.reps_per_verb;
@@ -111,14 +111,14 @@ impl FormChooser for RandomFormChooser {
             }
 
             //println!("{} {} - ", self.verb_counter, self.verb_idx);
-            if self.history.len() < 1 || self.verb_counter == 1 {
+            if self.history.is_empty() || self.verb_counter == 1 {
                 //println!("change verb idx: {}", self.verb_idx);
                 //println!("\tverb2: {}", self.verbs[self.verb_idx].pps[0]);
-                let person = self.persons.choose(&mut rand::thread_rng()).unwrap().clone();
-                let number = self.numbers.choose(&mut rand::thread_rng()).unwrap().clone();
-                let tense = self.tenses.choose(&mut rand::thread_rng()).unwrap().clone();
-                let voice = self.voices.choose(&mut rand::thread_rng()).unwrap().clone();
-                let mood = self.moods.choose(&mut rand::thread_rng()).unwrap().clone();
+                let person = *self.persons.choose(&mut rand::thread_rng()).unwrap();
+                let number = *self.numbers.choose(&mut rand::thread_rng()).unwrap();
+                let tense = *self.tenses.choose(&mut rand::thread_rng()).unwrap();
+                let voice = *self.voices.choose(&mut rand::thread_rng()).unwrap();
+                let mood = *self.moods.choose(&mut rand::thread_rng()).unwrap();
 
                 a = HcGreekVerbForm { verb: self.verbs[self.verb_idx].clone(), person, number, tense, voice, mood, gender: None, case: None};
             
@@ -151,7 +151,7 @@ impl FormChooser for RandomFormChooser {
             return Ok((self.history.last().unwrap().clone(), is_correct));
         }
 
-        return Err("overflow");
+        Err("overflow")
     }
 }
 

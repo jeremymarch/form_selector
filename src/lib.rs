@@ -77,15 +77,17 @@ impl FormChooser for RandomFormChooser {
             return Err("no verbs");
         }
 
-        if !self.history.is_empty() && prev_answer.is_some() {
-            //check verb
-            let prev_form = self.history.last().unwrap();
-            let prev_s = prev_form.get_form(false).unwrap().last().unwrap().form.to_string();
+        if !self.history.is_empty() {
+            if let Some(pa) = prev_answer {
+                //check verb
+                let prev_form = self.history.last().unwrap();
+                let prev_s = prev_form.get_form(false).unwrap().last().unwrap().form.to_string();
 
-            is_correct = Some(hgk_compare_multiple_forms(&prev_s.replace('/', ","), prev_answer.unwrap()));
+                is_correct = Some(hgk_compare_multiple_forms(&prev_s.replace('/', ","), pa));
 
-            if !is_correct.unwrap() && self.change_verb_incorrect {
-                self.verb_counter = self.reps_per_verb;
+                if !is_correct.unwrap() && self.change_verb_incorrect {
+                    self.verb_counter = self.reps_per_verb;
+                }
             }
         }
         
@@ -166,9 +168,9 @@ mod tests {
         // chooser.numbers = vec![HcNumber::Singular];
 
         for _ in 0..=10016 {
-            let mut vf = chooser.next_form(None).unwrap();
+            let vf = chooser.next_form(None).unwrap();
             let is_correct = vf.1;
-            let mut vfs = vf.0.get_form(false).unwrap().last().unwrap().form.to_string();
+            let vfs = vf.0.get_form(false).unwrap().last().unwrap().form.to_string();
             println!("{:?} {:?} {:?} {:?} {:?} \t\t\t- {} {:?}", vf.0.person, vf.0.number, vf.0.tense, vf.0.mood, vf.0.voice, vfs, is_correct);
         }
 

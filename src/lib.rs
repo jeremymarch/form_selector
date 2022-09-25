@@ -1,6 +1,6 @@
 extern crate hoplite_verbs_rs;
 use hoplite_verbs_rs::*;
-use rustunicodetests::hgk_compare_multiple_forms;
+use polytonic_greek::hgk_compare_multiple_forms;
 use rand::seq::SliceRandom;
 //use rand::Rng;
 use rand::thread_rng;
@@ -36,9 +36,12 @@ pub fn init_random_form_chooser(path:&str, unit: u32) -> RandomFormChooser {
         let pp_reader = BufReader::new(pp_file);
         for (idx, pp_line) in pp_reader.lines().enumerate() {
             if let Ok(line) = pp_line {
-                if line.chars().nth(0) != Some('#') { //skip commented lines
+                if !line.starts_with('#') { //skip commented lines
                     verbs.push(Arc::new(HcGreekVerb::from_string_with_properties(idx as u32, &line).unwrap()));
                 }
+                // else {
+                //     println!("skip");
+                // }
             }
         }
     }
@@ -70,7 +73,7 @@ impl FormChooser for RandomFormChooser {
     fn next_form(&mut self, prev_answer:Option<&str>) -> Result<(HcGreekVerbForm, Option<bool>), &str> {
         let mut count = 0;
         let mut a:HcGreekVerbForm;
-        let mut found = false;
+        
         let mut is_correct:Option<bool> = None;
 
         if self.verbs.is_empty() {
@@ -126,7 +129,6 @@ impl FormChooser for RandomFormChooser {
             
                 if let Ok(_f) = a.get_form(false) {
                     self.history.push( a );
-                    //found = true;
                     //break;
                 }
                 else {
@@ -140,8 +142,7 @@ impl FormChooser for RandomFormChooser {
 
             if let Ok(_f) = a.get_form(false) {
                 self.history.push( a );
-                found = true;
-                break;
+                break; //this breeak and the counter at the start are the only ways out of the loop
             }
             else {
                 //println!("\t\tNope Form: {} {:?} {:?} {:?} {:?} {:?}", a.verb.pps[0], a.person, a.number, a.tense, a.mood, a.voice);
@@ -149,11 +150,7 @@ impl FormChooser for RandomFormChooser {
             }
         }
 
-        if found { //we don't need this variable
-            return Ok((self.history.last().unwrap().clone(), is_correct));
-        }
-
-        Err("overflow")
+        Ok((self.history.last().unwrap().clone(), is_correct))
     }
 }
 

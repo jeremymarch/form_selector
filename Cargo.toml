@@ -1,15 +1,16 @@
 [package]
 name = "form_selector"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-hoplite_verbs_rs = { path = "../hoplite_verbs_rs" }
-#hoplite_verbs_rs = { git = "https://github.com/jeremymarch/hoplite_verbs_rs", version = "0.2.0" }
-rustunicodetests = { path = "../rustunicodetests" }
-#rustunicodetests = { git = "https://github.com/jeremymarch/rustunicodetests", version = "0.1.0" }
+#hoplite_verbs_rs = { path = "../hoplite_verbs_rs" }
+#polytonic-greek = { path = "../polytonic-greek" }
+hoplite_verbs_rs = { git = "https://github.com/jeremymarch/hoplite_verbs_rs", version = "0.3.2" }
+polytonic-greek = { git = "https://github.com/jeremymarch/polytonic-greek", version = "0.3.2" }
+
 rand = "0.8.5"
 
 [profile.release]

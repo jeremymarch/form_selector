@@ -5,8 +5,8 @@ edition = "2021"
 
 [dependencies]
 #hoplite_verbs_rs = { path = "../hoplite_verbs_rs" }
-hoplite_verbs_rs = { git = "https://github.com/jeremymarch/hoplite_verbs_rs", version = "0.3.7" }
-
+#hoplite_verbs_rs = { git = "https://github.com/jeremymarch/hoplite_verbs_rs", version = "0.4.9" }
+hoplite_verb_chooser = { path = "../hoplite_verb_chooser" }
 rand = "0.8.5"
 
 [profile.release]
